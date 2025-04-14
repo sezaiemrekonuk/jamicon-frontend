@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { Menu } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Icons } from "@/components/icons"
@@ -16,6 +17,14 @@ import {
 } from "@/components/ui/navigation-menu"
 import { NavItem, DropdownItem, NavLinkItem, FeaturedItem } from "@/types/navigation"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 interface NavbarProps {
   items?: NavItem[]
@@ -29,13 +38,17 @@ export function Navbar({
   includeThemeToggle = true
 }: NavbarProps) {
   return (
-    <div className={cn("flex items-center justify-between px-4 py-3", className)}>
-      <Link href="/" className="flex items-center space-x-2">
-        <Icons.logo className="h-6 w-6" />
-        <span className="font-bold text-xl">Your App</span>
-      </Link>
+    <div className={cn("flex items-center justify-between px-4 py-3 border-b", className)}>
+      {/* Logo - Left */}
+      <div className="flex-shrink-0">
+        <Link href="/" className="flex items-center space-x-2">
+          <Icons.logo className="h-6 w-6" />
+          <span className="font-bold text-xl">Acme Inc</span>
+        </Link>
+      </div>
       
-      <div className="flex items-center space-x-4">
+      {/* Desktop Navigation - Center */}
+      <div className="hidden md:flex flex-grow justify-center">
         <NavigationMenu>
           <NavigationMenuList>
             {items?.map((item, index) => {
@@ -61,10 +74,87 @@ export function Navbar({
             })}
           </NavigationMenuList>
         </NavigationMenu>
+      </div>
 
+      {/* Desktop Auth & Theme Toggle - Right */}
+      <div className="hidden md:flex flex-shrink-0 items-center space-x-4">
+        <Button variant="secondary" size="sm">
+          <Link href="/login" className="text-sm font-medium">
+            Login
+          </Link>
+        </Button>
+        <Button variant="default" size="sm">
+          <Link href="/register" className="text-sm font-medium">
+          Register
+        </Link>
+        </Button>
         {includeThemeToggle && (
           <ThemeToggle />
         )}
+      </div>
+
+      {/* Mobile Menu Button */}
+      <div className="md:hidden flex items-center space-x-2">
+        {includeThemeToggle && (
+          <ThemeToggle />
+        )}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetHeader>
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col space-y-3 mt-4">
+              {items?.map((item, index) => {
+                if (item.type === "link") {
+                  return (
+                    <Link
+                      key={index}
+                      href={item.href}
+                      className="text-sm font-medium hover:underline"
+                    >
+                      {item.title}
+                    </Link>
+                  )
+                }
+
+                if (item.type === "dropdown") {
+                  return (
+                    <div key={index} className="space-y-2">
+                      <div className="font-medium">{item.title}</div>
+                      <div className="ml-4 space-y-2">
+                        {item.items.map((subItem, subIndex) => (
+                          <Link
+                            key={subIndex}
+                            href={subItem.href}
+                            className="block text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            {subItem.title}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+
+                return null
+              })}
+              <div className="pt-4 border-t">
+                <Link href="/login" className="block text-sm font-medium hover:underline mb-2">
+                  Login
+                </Link>
+                <Link href="/register" className="block text-sm font-medium hover:underline">
+                  Register
+                </Link>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   )
