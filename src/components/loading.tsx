@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react"
+import { Gamepad2Icon, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
 
 export default function Loading() {
@@ -12,7 +12,6 @@ export default function Loading() {
       >
         <motion.div
           animate={{ 
-            rotate: 360,
             scale: [1, 1.2, 1]
           }}
           transition={{ 
@@ -21,15 +20,8 @@ export default function Loading() {
             ease: "easeInOut"
           }}
         >
-          <Loader2 className="h-16 w-16 text-primary" />
+          <Gamepad2Icon className="h-16 w-16 text-primary" />
         </motion.div>
-        <motion.p 
-          className="text-lg font-medium text-muted-foreground"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          Loading...
-        </motion.p>
       </motion.div>
     </div>
   )
