@@ -46,9 +46,9 @@ export function Navbar({
           <span className="font-bold text-xl">Acme Inc</span>
         </Link>
       </div>
-      
-      {/* Desktop Navigation - Center */}
-      <div className="hidden md:flex flex-grow justify-center">
+
+      {/* Desktop Navigation & Auth - Right */}
+      <div className="hidden md:flex items-center space-x-6">
         <NavigationMenu>
           <NavigationMenuList>
             {items?.map((item, index) => {
@@ -74,23 +74,22 @@ export function Navbar({
             })}
           </NavigationMenuList>
         </NavigationMenu>
-      </div>
 
-      {/* Desktop Auth & Theme Toggle - Right */}
-      <div className="hidden md:flex flex-shrink-0 items-center space-x-4">
-        <Button variant="secondary" size="sm">
-          <Link href="/login" className="text-sm font-medium">
-            Login
-          </Link>
-        </Button>
-        <Button variant="default" size="sm">
-          <Link href="/register" className="text-sm font-medium">
-          Register
-        </Link>
-        </Button>
-        {includeThemeToggle && (
-          <ThemeToggle />
-        )}
+        <div className="flex items-center space-x-4">
+          <Button variant="secondary" size="sm">
+            <Link href="/login" className="text-sm font-medium">
+              Login
+            </Link>
+          </Button>
+          <Button variant="default" size="sm">
+            <Link href="/register" className="text-sm font-medium">
+              Register
+            </Link>
+          </Button>
+          {includeThemeToggle && (
+            <ThemeToggle />
+          )}
+        </div>
       </div>
 
       {/* Mobile Menu Button */}
@@ -234,4 +233,4 @@ const ListItem = React.forwardRef<
     </li>
   )
 })
-ListItem.displayName = "ListItem" 
+ListItem.displayName = "ListItem"
