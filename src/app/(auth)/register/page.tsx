@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="container grid h-screen w-screen lg:max-w-none lg:grid-cols-2 lg:px-0">
+    <div className="container grid h-screen w-screen lg:max-w-none lg:grid-cols-2 lg:px-0 mx-auto">
       <div className="hidden h-full bg-muted lg:block">
         <div className="flex h-full items-end justify-start bg-primary p-8">
           <blockquote className="space-y-2">
