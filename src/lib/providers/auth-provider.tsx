@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Auth } from "firebase/auth";
-import { getAuthService } from "../auth-service";
+import { getAuthService } from "../services/auth-service";
 import Loading from "@/components/loading";
 
 interface AppUser {

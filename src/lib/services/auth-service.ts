@@ -1,6 +1,6 @@
 "use client";
 
-import { LoginFormValues, RegisterFormValues } from "./auth-schema";
+import { LoginFormValues, RegisterFormValues } from "../auth-schema";
 import { 
     User,
     Auth,
@@ -13,7 +13,7 @@ import {
     updatePassword,
     deleteUser
 } from "firebase/auth";
-import { getFirebaseInstance } from "./firebase";
+import { getFirebaseInstance } from "../firebase";
 
 export class AuthService {
     private static instance: AuthService;

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { LoginFormValues, loginSchema } from "@/lib/auth-schema";
-import { getAuthService } from "@/lib/auth-service";
+import { getAuthService } from "@/lib/services/auth-service";
 import { Button } from "@/components/ui/button";
 import {
   Form,
