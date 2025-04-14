@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { RegisterFormValues, registerSchema } from "@/lib/auth-schema";
-import { authService } from "@/lib/auth-service";
+import { getAuthService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -29,6 +29,7 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const authService = getAuthService();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -45,16 +46,10 @@ export function RegisterForm() {
     setError(null);
 
     try {
-      const result = await authService.register(data);
-      
-      if (result.success) {
-        // Navigate to dashboard on successful registration
-        router.push("/dashboard");
-      } else {
-        setError(result.message || "Something went wrong. Please try again.");
-      }
-    } catch (error) {
-      setError("An unexpected error occurred. Please try again.");
+      await authService.signUp(data.email, data.password);
+      router.push("/dashboard");
+    } catch (error: any) {
+      setError(error.message || "An unexpected error occurred. Please try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -64,12 +59,11 @@ export function RegisterForm() {
   const handleGitHubSignup = async () => {
     setIsGitHubLoading(true);
     try {
-      // This would be replaced with actual GitHub OAuth logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push("/dashboard");
-    } catch (error) {
+      // TODO: Implement GitHub OAuth
+      setError("GitHub signup is not implemented yet");
+    } catch (error: any) {
       console.error("GitHub signup error:", error);
-      setError("Failed to sign up with GitHub. Please try again.");
+      setError(error.message || "Failed to sign up with GitHub. Please try again.");
     } finally {
       setIsGitHubLoading(false);
     }
@@ -78,12 +72,11 @@ export function RegisterForm() {
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     try {
-      // This would be replaced with actual Google OAuth logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push("/dashboard");
-    } catch (error) {
+      // TODO: Implement Google OAuth
+      setError("Google signup is not implemented yet");
+    } catch (error: any) {
       console.error("Google signup error:", error);
-      setError("Failed to sign up with Google. Please try again.");
+      setError(error.message || "Failed to sign up with Google. Please try again.");
     } finally {
       setIsGoogleLoading(false);
     }

@@ -1,20 +1,8 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    User,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signOut,
-    sendPasswordResetEmail,
-    updateProfile,
-    updateEmail,
-    updatePassword,
-    deleteUser
-} from "firebase/auth";
-import { getFirebaseInstance } from "../firebase";
+import { User, Auth } from "firebase/auth";
+import { getAuthService } from "../auth-service";
 import Loading from "@/components/loading";
 
 interface AppUser {
@@ -33,114 +21,66 @@ interface AuthContextType extends AppUser {
     deleteUserAccount: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export function useAuth() {
+export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
         throw new Error("useAuth must be used within an AuthProvider");
     }
     return context;
-}
+};
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<AppUser | undefined>(undefined);
-    const [loading, setLoading] = useState(true);
-    const auth = getFirebaseInstance().auth;
-
-    const signIn = async (email: string, password: string) => {
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const signUp = async (email: string, password: string) => {
-        try {
-            await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const logout = async () => {
-        try {
-            await signOut(auth);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const resetPassword = async (email: string) => {
-        try {
-            await sendPasswordResetEmail(auth, email);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const updateUserProfile = async (data: { displayName?: string; photoURL?: string }) => {
-        if (!user?.user) throw new Error("No user logged in");
-        try {
-            await updateProfile(user.user, data);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const updateUserEmail = async (email: string) => {
-        if (!user?.user) throw new Error("No user logged in");
-        try {
-            await updateEmail(user.user, email);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const updateUserPassword = async (password: string) => {
-        if (!user?.user) throw new Error("No user logged in");
-        try {
-            await updatePassword(user.user, password);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    const deleteUserAccount = async () => {
-        if (!user?.user) throw new Error("No user logged in");
-        try {
-            await deleteUser(user.user);
-        } catch (error) {
-            throw error;
-        }
-    };
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [status, setStatus] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
+    const authService = getAuthService();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            const status = user ? "authenticated" : "unauthenticated";
-            setUser({ status, user });
-            setLoading(false);
+        const unsubscribe = authService.getAuth().onAuthStateChanged((user: User | null) => {
+            setUser(user);
+            setStatus(user ? "authenticated" : "unauthenticated");
         });
 
         return () => unsubscribe();
     }, []);
 
-    const value = {
-        ...user!,
-        signIn,
-        signUp,
-        logout,
-        resetPassword,
-        updateUserProfile,
-        updateUserEmail,
-        updateUserPassword,
-        deleteUserAccount
+    const value: AuthContextType = {
+        status,
+        user,
+        signIn: async (email: string, password: string) => {
+            await authService.signIn(email, password);
+        },
+        signUp: async (email: string, password: string) => {
+            await authService.signUp(email, password);
+        },
+        logout: async () => {
+            await authService.logout();
+        },
+        resetPassword: async (email: string) => {
+            await authService.resetPassword(email);
+        },
+        updateUserProfile: async (data: { displayName?: string; photoURL?: string }) => {
+            await authService.updateUserProfile(data);
+        },
+        updateUserEmail: async (email: string) => {
+            await authService.updateUserEmail(email);
+        },
+        updateUserPassword: async (password: string) => {
+            await authService.updateUserPassword(password);
+        },
+        deleteUserAccount: async () => {
+            await authService.deleteUserAccount();
+        },
     };
 
-    if (loading) {
+    if (status === "loading") {
         return <Loading />;
     }
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};

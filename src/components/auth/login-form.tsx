@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { LoginFormValues, loginSchema } from "@/lib/auth-schema";
-import { authService } from "@/lib/auth-service";
+import { getAuthService } from "@/lib/auth-service";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,6 +27,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const authService = getAuthService();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,16 +42,10 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const result = await authService.login(data);
-      
-      if (result.success) {
-        // Navigate to dashboard on successful login
-        router.push("/dashboard");
-      } else {
-        setError(result.message || "Something went wrong. Please try again.");
-      }
-    } catch (error) {
-      setError("An unexpected error occurred. Please try again.");
+      await authService.signIn(data.email, data.password);
+      router.push("/dashboard");
+    } catch (error: any) {
+      setError(error.message || "An unexpected error occurred. Please try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -60,12 +55,11 @@ export function LoginForm() {
   const handleGitHubLogin = async () => {
     setIsGitHubLoading(true);
     try {
-      // This would be replaced with actual GitHub OAuth logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push("/dashboard");
-    } catch (error) {
+      // TODO: Implement GitHub OAuth
+      setError("GitHub login is not implemented yet");
+    } catch (error: any) {
       console.error("GitHub login error:", error);
-      setError("Failed to login with GitHub. Please try again.");
+      setError(error.message || "Failed to login with GitHub. Please try again.");
     } finally {
       setIsGitHubLoading(false);
     }
@@ -74,12 +68,11 @@ export function LoginForm() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // This would be replaced with actual Google OAuth logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push("/dashboard");
-    } catch (error) {
+      // TODO: Implement Google OAuth
+      setError("Google login is not implemented yet");
+    } catch (error: any) {
       console.error("Google login error:", error);
-      setError("Failed to login with Google. Please try again.");
+      setError(error.message || "Failed to login with Google. Please try again.");
     } finally {
       setIsGoogleLoading(false);
     }
