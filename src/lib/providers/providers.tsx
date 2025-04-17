@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AuthProvider } from "./auth-provider";
 import { ThemeProvider } from "./theme-provider";
 import Loading from "@/components/loading";
+import { Toaster } from "sonner";
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
     
@@ -19,6 +20,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
         <AuthProvider>
             <ThemeProvider>
                 {children}
+                <Toaster />
             </ThemeProvider>
         </AuthProvider>
     ) : (

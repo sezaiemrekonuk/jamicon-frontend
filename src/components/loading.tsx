@@ -1,4 +1,4 @@
-import { Gamepad2Icon, Loader2 } from "lucide-react"
+import { Gamepad2Icon } from "lucide-react"
 import { motion } from "framer-motion"
 
 export default function Loading() {

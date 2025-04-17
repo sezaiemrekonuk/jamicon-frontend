@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { SocialButton } from "@/components/auth/social-button";
 import { GitHubLogoIcon, Icons } from "@/components/icons";
+import { toast } from "sonner";
 
 export function LoginForm() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export function LoginForm() {
 
     try {
       await authService.signIn(data.email, data.password);
-      router.push("/dashboard");
+      router.push("/");
     } catch (error: any) {
       setError(error.message || "An unexpected error occurred. Please try again.");
       console.error(error);
@@ -57,6 +58,7 @@ export function LoginForm() {
     try {
       // TODO: Implement GitHub OAuth
       setError("GitHub login is not implemented yet");
+      toast.error("GitHub login is not implemented yet");
     } catch (error: any) {
       console.error("GitHub login error:", error);
       setError(error.message || "Failed to login with GitHub. Please try again.");
@@ -70,6 +72,7 @@ export function LoginForm() {
     try {
       // TODO: Implement Google OAuth
       setError("Google login is not implemented yet");
+      toast.error("Google login is not implemented yet");
     } catch (error: any) {
       console.error("Google login error:", error);
       setError(error.message || "Failed to login with Google. Please try again.");

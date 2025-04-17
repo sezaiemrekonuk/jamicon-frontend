@@ -11,7 +11,9 @@ import {
     updateProfile,
     updateEmail,
     updatePassword,
-    deleteUser
+    deleteUser,
+    sendEmailVerification,
+    applyActionCode
 } from "firebase/auth";
 import { getFirebaseInstance } from "../firebase";
 
@@ -41,6 +43,12 @@ export class AuthService {
 
     public async signUp(email: string, password: string): Promise<User> {
         const result = await createUserWithEmailAndPassword(this.auth, email, password);
+
+        // Send verification email
+        await sendEmailVerification(result.user, {
+            url: `${process.env.NEXT_PUBLIC_BASE_URL}/verify-email`
+        });
+
         return result.user;
     }
 
@@ -70,6 +78,10 @@ export class AuthService {
     public async deleteUserAccount(): Promise<void> {
         if (!this.auth.currentUser) throw new Error("No user logged in");
         await deleteUser(this.auth.currentUser);
+    }
+
+    public async verifyEmail(oobCode: string): Promise<void> {
+        await applyActionCode(this.auth, oobCode);
     }
 
     public getCurrentUser(): User | null {

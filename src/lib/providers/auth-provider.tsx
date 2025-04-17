@@ -19,6 +19,7 @@ interface AuthContextType extends AppUser {
     updateUserEmail: (email: string) => Promise<void>;
     updateUserPassword: (password: string) => Promise<void>;
     deleteUserAccount: () => Promise<void>;
+    verifyEmail: (oobCode: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -71,6 +72,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         },
         deleteUserAccount: async () => {
             await authService.deleteUserAccount();
+        },
+        verifyEmail: async (oobCode: string) => {
+            await authService.verifyEmail(oobCode);
         },
     };
 

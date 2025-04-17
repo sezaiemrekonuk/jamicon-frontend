@@ -22,6 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SocialButton } from "@/components/auth/social-button";
 import { GitHubLogoIcon, Icons } from "@/components/icons";
+import { toast } from "sonner";
+import { firebaseErrors } from "@/lib/utils";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -46,10 +48,20 @@ export function RegisterForm() {
     setError(null);
 
     try {
-      await authService.signUp(data.email, data.password);
-      router.push("/dashboard");
+      const response = await authService.signUp(data.email, data.password);
+
+      if (response) {
+        toast.success("Account created successfully. Please verify your email.");
+
+        router.push("/verify-email");
+      }
     } catch (error: any) {
-      setError(error.message || "An unexpected error occurred. Please try again.");
+      if (error.code) {
+        setError(firebaseErrors[error.code as keyof typeof firebaseErrors] || "An unexpected error occurred. Please try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
+
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -61,6 +73,7 @@ export function RegisterForm() {
     try {
       // TODO: Implement GitHub OAuth
       setError("GitHub signup is not implemented yet");
+      toast.error("GitHub signup is not implemented yet");
     } catch (error: any) {
       console.error("GitHub signup error:", error);
       setError(error.message || "Failed to sign up with GitHub. Please try again.");
@@ -74,6 +87,7 @@ export function RegisterForm() {
     try {
       // TODO: Implement Google OAuth
       setError("Google signup is not implemented yet");
+      toast.error("Google signup is not implemented yet");
     } catch (error: any) {
       console.error("Google signup error:", error);
       setError(error.message || "Failed to sign up with Google. Please try again.");
