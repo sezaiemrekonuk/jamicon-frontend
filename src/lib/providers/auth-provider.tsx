@@ -1,25 +1,20 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { User, Auth } from "firebase/auth";
-import { getAuthService } from "../services/auth-service";
+import { User } from "../services/api-service";
+import { getApiService } from "../services/api-service";
 import Loading from "@/components/loading";
+import { LoginFormValues, RegisterFormValues } from "../auth-schema";
+import { getCookie } from "cookies-next";
 
-interface AppUser {
+interface AuthContextType {
     status: "loading" | "unauthenticated" | "authenticated";
     user: User | null;
-}
-
-interface AuthContextType extends AppUser {
-    signIn: (email: string, password: string) => Promise<void>;
-    signUp: (email: string, password: string) => Promise<void>;
+    signIn: (data: LoginFormValues) => Promise<User>;
+    signUp: (data: RegisterFormValues) => Promise<User>;
     logout: () => Promise<void>;
-    resetPassword: (email: string) => Promise<void>;
-    updateUserProfile: (data: { displayName?: string; photoURL?: string }) => Promise<void>;
-    updateUserEmail: (email: string) => Promise<void>;
-    updateUserPassword: (password: string) => Promise<void>;
-    deleteUserAccount: () => Promise<void>;
-    verifyEmail: (oobCode: string) => Promise<void>;
+    verifyEmail: (token: string) => Promise<User>;
+    resendVerificationEmail: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,47 +30,74 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [status, setStatus] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
-    const authService = getAuthService();
+    const apiService = getApiService();
 
     useEffect(() => {
-        const unsubscribe = authService.getAuth().onAuthStateChanged((user: User | null) => {
-            setUser(user);
-            setStatus(user ? "authenticated" : "unauthenticated");
-        });
+        const loadUser = async () => {
+            try {
+                // Check if access token exists
+                const accessToken = getCookie('accessToken');
+                if (!accessToken) {
+                    setStatus("unauthenticated");
+                    return;
+                }
 
-        return () => unsubscribe();
+                // Fetch user data
+                const userData = await apiService.getMe();
+                setUser(userData);
+                setStatus("authenticated");
+            } catch (error) {
+                // Try to refresh token if getting user fails
+                try {
+                    await apiService.refreshToken();
+                    // Try getting user again after token refresh
+                    const userData = await apiService.getMe();
+                    setUser(userData);
+                    setStatus("authenticated");
+                } catch (refreshError) {
+                    setUser(null);
+                    setStatus("unauthenticated");
+                }
+            }
+        };
+
+        loadUser();
     }, []);
 
     const value: AuthContextType = {
         status,
         user,
-        signIn: async (email: string, password: string) => {
-            await authService.signIn(email, password);
+        signIn: async (data: LoginFormValues) => {
+            const response = await apiService.login(data);
+            setUser(response.user);
+            setStatus("authenticated");
+            return response.user;
         },
-        signUp: async (email: string, password: string) => {
-            await authService.signUp(email, password);
+        signUp: async (data: RegisterFormValues) => {
+            const response = await apiService.register(data);
+            setUser(response.user);
+            setStatus("authenticated");
+            return response.user;
         },
         logout: async () => {
-            await authService.logout();
+            await apiService.logout();
+            setUser(null);
+            setStatus("unauthenticated");
         },
-        resetPassword: async (email: string) => {
-            await authService.resetPassword(email);
+        verifyEmail: async (token: string) => {
+            const user = await apiService.verifyEmail(token);
+            // Only update user if this is the current user
+            if (user && user.id === user?.id) {
+                setUser({
+                    ...user,
+                    emailVerified: true
+                });
+            }
+            return user;
         },
-        updateUserProfile: async (data: { displayName?: string; photoURL?: string }) => {
-            await authService.updateUserProfile(data);
-        },
-        updateUserEmail: async (email: string) => {
-            await authService.updateUserEmail(email);
-        },
-        updateUserPassword: async (password: string) => {
-            await authService.updateUserPassword(password);
-        },
-        deleteUserAccount: async () => {
-            await authService.deleteUserAccount();
-        },
-        verifyEmail: async (oobCode: string) => {
-            await authService.verifyEmail(oobCode);
-        },
+        resendVerificationEmail: async () => {
+            await apiService.resendVerificationEmail();
+        }
     };
 
     if (status === "loading") {

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { LucideProps } from "lucide-react"
-import { Github } from "lucide-react"
+import { Github, Loader2 } from "lucide-react"
 import { Gamepad } from "lucide-react"
 
 export const Icons = {
@@ -10,6 +10,7 @@ export const Icons = {
     <Gamepad {...props} />
   ),
   github: (props: LucideProps) => <Github {...props} />,
+  spinner: (props: LucideProps) => <Loader2 {...props} />,
   google: (props: LucideProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"

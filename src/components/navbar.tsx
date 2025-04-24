@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu } from "lucide-react"
+import { Menu, User } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Icons } from "@/components/icons"
@@ -25,6 +25,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useAuth } from "@/lib/providers/auth-provider"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface NavbarProps {
   items?: NavItem[]
@@ -37,8 +47,30 @@ export function Navbar({
   className,
   includeThemeToggle = true
 }: NavbarProps) {
+  const { user, status, logout } = useAuth();
+  const isAuthenticated = status === "authenticated";
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map(part => part.charAt(0))
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
-    <div className="container  border-b">
+    <div className="w-full border-b">
+    <div className="container mx-auto">
       <div className={cn("flex items-center justify-between mx-auto max-w-7xl py-3", className)}>
         {/* Logo - Left */}
         <div className="flex-shrink-0">
@@ -67,7 +99,7 @@ export function Navbar({
 
                 if (item.type === "dropdown") {
                   return (
-                    <DropdownMenuItem key={index} item={item} />
+                    <NavDropdownMenuItem key={index} item={item} />
                   )
                 }
 
@@ -77,16 +109,53 @@ export function Navbar({
           </NavigationMenu>
 
           <div className="flex items-center space-x-4">
-            <Button variant="secondary" size="sm">
-              <Link href="/login" className="text-sm font-medium">
-                Login
-              </Link>
-            </Button>
-            <Button variant="default" size="sm">
-              <Link href="/register" className="text-sm font-medium">
-                Register
-              </Link>
-            </Button>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar>
+                      <AvatarImage src={user?.image || undefined} alt={user?.name || "User"} />
+                      <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="secondary" size="sm">
+                  <Link href="/login" className="text-sm font-medium">
+                    Login
+                  </Link>
+                </Button>
+                <Button variant="default" size="sm">
+                  <Link href="/register" className="text-sm font-medium">
+                    Register
+                  </Link>
+                </Button>
+              </>
+            )}
             {includeThemeToggle && (
               <ThemeToggle />
             )}
@@ -145,12 +214,41 @@ export function Navbar({
                   return null
                 })}
                 <div className="pt-4 border-t">
-                  <Link href="/login" className="block text-sm font-medium hover:underline mb-2">
-                    Login
-                  </Link>
-                  <Link href="/register" className="block text-sm font-medium hover:underline">
-                    Register
-                  </Link>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.image || undefined} alt={user?.name || "User"} />
+                          <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <p className="text-sm font-medium">{user?.name || "User"}</p>
+                          <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        </div>
+                      </div>
+                      <Link href="/dashboard" className="block text-sm font-medium hover:underline mb-2">
+                        Dashboard
+                      </Link>
+                      <Link href="/profile" className="block text-sm font-medium hover:underline mb-2">
+                        Profile
+                      </Link>
+                      <Link href="/settings" className="block text-sm font-medium hover:underline mb-2">
+                        Settings
+                      </Link>
+                      <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
+                        Log out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login" className="block text-sm font-medium hover:underline mb-2">
+                        Login
+                      </Link>
+                      <Link href="/register" className="block text-sm font-medium hover:underline">
+                        Register
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>
@@ -158,14 +256,15 @@ export function Navbar({
         </div>
       </div>
     </div>
+    </div>
   )
 }
 
-interface DropdownMenuItemProps {
+interface NavDropdownMenuItemProps {
   item: DropdownItem
 }
 
-function DropdownMenuItem({ item }: DropdownMenuItemProps) {
+function NavDropdownMenuItem({ item }: NavDropdownMenuItemProps) {
   const featuredItem = item.items.find((i) => i.type === "featured") as FeaturedItem | undefined
   const otherItems = item.items.filter((i) => i.type !== "featured") as NavLinkItem[]
 

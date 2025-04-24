@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { RegisterFormValues, registerSchema } from "@/lib/auth-schema";
-import { getAuthService } from "@/lib/services/auth-service";
+import { useAuth } from "@/lib/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,7 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SocialButton } from "@/components/auth/social-button";
 import { GitHubLogoIcon, Icons } from "@/components/icons";
 import { toast } from "sonner";
-import { firebaseErrors } from "@/lib/utils";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -31,11 +30,12 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const authService = getAuthService();
+  const { signUp } = useAuth();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -48,20 +48,11 @@ export function RegisterForm() {
     setError(null);
 
     try {
-      const response = await authService.signUp(data.email, data.password);
-
-      if (response) {
-        toast.success("Account created successfully. Please verify your email.");
-
-        router.push("/verify-email");
-      }
+      await signUp(data);
+      toast.success("Account created successfully. Please verify your email.");
+      router.push("/verify-email");
     } catch (error: any) {
-      if (error.code) {
-        setError(firebaseErrors[error.code as keyof typeof firebaseErrors] || "An unexpected error occurred. Please try again.");
-      } else {
-        setError("An unexpected error occurred. Please try again.");
-      }
-
+      setError(error.message || "An unexpected error occurred. Please try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -112,6 +103,25 @@ export function RegisterForm() {
               {error}
             </div>
           )}
+          
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="text" 
+                    placeholder="John Doe" 
+                    {...field} 
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
           <FormField
             control={form.control}

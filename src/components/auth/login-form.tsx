@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { LoginFormValues, loginSchema } from "@/lib/auth-schema";
-import { getAuthService } from "@/lib/services/auth-service";
+import { useAuth } from "@/lib/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,14 +21,18 @@ import { Input } from "@/components/ui/input";
 import { SocialButton } from "@/components/auth/social-button";
 import { GitHubLogoIcon, Icons } from "@/components/icons";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/";
+  const { signIn } = useAuth();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const authService = getAuthService();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -38,48 +42,48 @@ export function LoginForm() {
     },
   });
 
-  async function onSubmit(data: LoginFormValues) {
+  const onSubmit = useCallback(async (data: LoginFormValues) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await authService.signIn(data.email, data.password);
-      router.push("/");
+      await signIn(data);
+      toast.success("Successfully logged in");
+      router.push(redirectTo);
     } catch (error: any) {
-      setError(error.message || "An unexpected error occurred. Please try again.");
-      console.error(error);
+      const errorMessage = error.message || "Authentication failed. Please check your credentials.";
+      setError(errorMessage);
+      
+      if (errorMessage.toLowerCase().includes("verify")) {
+        toast.error("Please verify your email before logging in");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [signIn, router, redirectTo]);
 
-  const handleGitHubLogin = async () => {
-    setIsGitHubLoading(true);
+  const handleSocialLogin = useCallback(async (provider: "github" | "google") => {
+    const setLoading = provider === "github" ? setIsGitHubLoading : setIsGoogleLoading;
+    setLoading(true);
+    setError(null);
+    
     try {
-      // TODO: Implement GitHub OAuth
-      setError("GitHub login is not implemented yet");
-      toast.error("GitHub login is not implemented yet");
+      // Social login implementation would go here
+      const errorMessage = `${provider === "github" ? "GitHub" : "Google"} login is not implemented yet`;
+      setError(errorMessage);
+      toast.error(errorMessage);
     } catch (error: any) {
-      console.error("GitHub login error:", error);
-      setError(error.message || "Failed to login with GitHub. Please try again.");
+      console.error(`${provider} login error:`, error);
+      setError(error.message || `Failed to login with ${provider}. Please try again.`);
     } finally {
-      setIsGitHubLoading(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
-    try {
-      // TODO: Implement Google OAuth
-      setError("Google login is not implemented yet");
-      toast.error("Google login is not implemented yet");
-    } catch (error: any) {
-      console.error("Google login error:", error);
-      setError(error.message || "Failed to login with Google. Please try again.");
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
+  const handleGitHubLogin = useCallback(() => handleSocialLogin("github"), [handleSocialLogin]);
+  const handleGoogleLogin = useCallback(() => handleSocialLogin("google"), [handleSocialLogin]);
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -88,6 +92,11 @@ export function LoginForm() {
         <p className="text-sm text-muted-foreground">
           Enter your credentials to sign in to your account
         </p>
+        {redirectTo !== "/" && (
+          <Badge variant="outline" className="mx-auto mt-2">
+            You'll be redirected after login
+          </Badge>
+        )}
       </div>
 
       <Form {...form}>
@@ -108,6 +117,7 @@ export function LoginForm() {
                   <Input 
                     type="email" 
                     placeholder="name@example.com" 
+                    autoComplete="email"
                     {...field} 
                     disabled={isLoading}
                   />
@@ -122,11 +132,20 @@ export function LoginForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Password</FormLabel>
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-xs text-muted-foreground hover:text-primary"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <FormControl>
                   <Input 
                     type="password" 
                     placeholder="••••••••" 
+                    autoComplete="current-password"
                     {...field} 
                     disabled={isLoading}
                   />
@@ -141,7 +160,14 @@ export function LoginForm() {
             className="w-full" 
             disabled={isLoading}
           >
-            {isLoading ? "Signing in..." : "Sign In"}
+            {isLoading ? (
+              <>
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" /> 
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </Button>
         </form>
       </Form>
