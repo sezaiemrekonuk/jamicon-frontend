@@ -112,17 +112,18 @@ export function Navbar({
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar>
-                      <AvatarImage src={user?.image || undefined} alt={user?.name || "User"} />
-                      <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                  <Button variant="ghost" className="relative flex items-center gap-2 rounded-full pl-2 pr-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatarUrl || undefined} alt={user?.username || "User"} />
+                      <AvatarFallback>{getInitials(user?.username)}</AvatarFallback>
                     </Avatar>
+                    <span className="font-medium text-sm">{user?.username || "User"}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
+                      <p className="text-sm font-medium leading-none">{user?.username || "User"}</p>
                       <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                     </div>
                   </DropdownMenuLabel>
@@ -134,7 +135,7 @@ export function Navbar({
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings">Settings</Link>
+                    <Link href="/teams">Teams</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -218,11 +219,11 @@ export function Navbar({
                     <>
                       <div className="flex items-center space-x-2 mb-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.image || undefined} alt={user?.name || "User"} />
-                          <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                          <AvatarImage src={user?.avatarUrl || undefined} alt={user?.username || "User"} />
+                          <AvatarFallback>{getInitials(user?.username)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                          <p className="text-sm font-medium">{user?.name || "User"}</p>
+                          <p className="text-sm font-medium">{user?.username || "User"}</p>
                           <p className="text-xs text-muted-foreground">{user?.email}</p>
                         </div>
                       </div>
@@ -232,8 +233,8 @@ export function Navbar({
                       <Link href="/profile" className="block text-sm font-medium hover:underline mb-2">
                         Profile
                       </Link>
-                      <Link href="/settings" className="block text-sm font-medium hover:underline mb-2">
-                        Settings
+                      <Link href="/teams" className="block text-sm font-medium hover:underline mb-2">
+                        Teams
                       </Link>
                       <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                         Log out

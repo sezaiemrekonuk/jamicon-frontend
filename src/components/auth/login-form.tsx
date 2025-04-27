@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,13 +26,23 @@ import { Badge } from "@/components/ui/badge";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/";
+  const [redirectTarget, setRedirectTarget] = useState<string>(searchParams.get("redirectTo") || "/");
   const { signIn } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Check for stored redirect from invitation flow
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedRedirect = localStorage.getItem('redirectAfterLogin');
+      if (storedRedirect) {
+        setRedirectTarget(storedRedirect);
+      }
+    }
+  }, []);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -49,7 +59,15 @@ export function LoginForm() {
     try {
       await signIn(data);
       toast.success("Successfully logged in");
-      router.push(redirectTo);
+      
+      // Clear stored redirect if we're using it
+      if (typeof window !== 'undefined' && localStorage.getItem('redirectAfterLogin')) {
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        localStorage.removeItem('redirectAfterLogin');
+        router.push(redirectPath || redirectTarget);
+      } else {
+        router.push(redirectTarget);
+      }
     } catch (error: any) {
       const errorMessage = error.message || "Authentication failed. Please check your credentials.";
       setError(errorMessage);
@@ -62,7 +80,7 @@ export function LoginForm() {
     } finally {
       setIsLoading(false);
     }
-  }, [signIn, router, redirectTo]);
+  }, [signIn, router, redirectTarget]);
 
   const handleSocialLogin = useCallback(async (provider: "github" | "google") => {
     const setLoading = provider === "github" ? setIsGitHubLoading : setIsGoogleLoading;
@@ -92,7 +110,7 @@ export function LoginForm() {
         <p className="text-sm text-muted-foreground">
           Enter your credentials to sign in to your account
         </p>
-        {redirectTo !== "/" && (
+        {redirectTarget !== "/" && (
           <Badge variant="outline" className="mx-auto mt-2">
             You'll be redirected after login
           </Badge>

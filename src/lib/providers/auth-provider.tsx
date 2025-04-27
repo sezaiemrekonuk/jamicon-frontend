@@ -15,6 +15,9 @@ interface AuthContextType {
     logout: () => Promise<void>;
     verifyEmail: (token: string) => Promise<User>;
     resendVerificationEmail: () => Promise<void>;
+    forgotPassword: (email: string) => Promise<void>;
+    resetPassword: (token: string, password: string) => Promise<User>;
+    updateUserInfo: (updatedUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -97,6 +100,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         },
         resendVerificationEmail: async () => {
             await apiService.resendVerificationEmail();
+        },
+        forgotPassword: async (email: string) => {
+            await apiService.forgotPassword(email);
+        },
+        resetPassword: async (token: string, password: string) => {
+            const user = await apiService.resetPassword(token, password);
+            return user;
+        },
+        updateUserInfo: (updatedUser: Partial<User>) => {
+            setUser(currentUser => 
+                currentUser ? { ...currentUser, ...updatedUser } : null
+            );
         }
     };
 

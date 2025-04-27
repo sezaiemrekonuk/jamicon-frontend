@@ -1,18 +1,34 @@
 import { RegisterFormValues, LoginFormValues } from "../auth-schema";
 import { setCookie, getCookie, deleteCookie } from "cookies-next";
 
-interface TokensDto {
+export interface TokensDto {
   accessToken: string;
   refreshToken: string;
+}
+
+export interface UserProfile {
+  id: string;
+  userId: string;
+  name: string | null;
+  bio: string | null;
+  location: string | null;
+  phone: string | null;
+  website: string | null;
+  github: string | null;
+  twitter: string | null;
+  youtube: string | null;
+  twitch: string | null;
+  discord: string | null;
 }
 
 export interface User {
   id: string;
   email: string;
-  name: string | null;
-  image: string | null;
+  username: string | null;
+  avatarUrl: string | null;
   emailVerified: boolean;
   role: string;
+  userProfile?: UserProfile | null;
 }
 
 export interface AuthResponse {
@@ -58,7 +74,7 @@ class ApiService {
       body: JSON.stringify({
         email: data.email,
         password: data.password,
-        name: data.name
+        username: data.username
       })
     });
 
@@ -130,6 +146,27 @@ class ApiService {
     });
 
     await this.handleResponse<{status: string; message: string}>(response);
+  }
+
+  public async forgotPassword(email: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    await this.handleResponse<{status: string; message: string}>(response);
+  }
+
+  public async resetPassword(token: string, password: string): Promise<User> {
+    const response = await fetch(`${this.baseUrl}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password })
+    });
+
+    const result = await this.handleResponse<{status: string; data: {user: User}}>(response);
+    return result.data.user;
   }
 
   private saveTokens(tokens: TokensDto): void {
