@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// This array contains paths that should only be accessible to authenticated users
-const protectedPaths = [
-  '/verification-success',
-  '/dashboard',
-  '/profile',
-  '/settings'
+// This array contains paths that are publicly accessible
+const publicPaths = [
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
 ];
 
-// This function checks if the request is for a protected path
-function isProtectedPath(path: string): boolean {
-  return protectedPaths.some(protectedPath => 
-    path === protectedPath || path.startsWith(`${protectedPath}/`)
+// This function checks if the request is for a public path
+function isPublicPath(path: string): boolean {
+  return publicPaths.some(publicPath => 
+    path === publicPath || path.startsWith(`${publicPath}/`)
   );
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Check if the requested path is protected
-  if (isProtectedPath(pathname)) {
+  // If path is not public, check for authentication
+  if (!isPublicPath(pathname)) {
     // Check for access token in cookies
     const accessToken = request.cookies.get('accessToken')?.value;
     
