@@ -30,7 +30,14 @@ export default function ProfilePage() {
   
   const { user: authUser } = useAuth();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm();
+  const passwordForm = useForm({
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+  });
   
 
   useEffect(() => {
@@ -93,9 +100,48 @@ export default function ProfilePage() {
       setIsPasswordLoading(true);
       await userApi.updatePassword(data.currentPassword, data.newPassword);
       toast.success('Password updated successfully');
-    } catch (error) {
+      
+      // Reset the password form after successful submission
+      passwordForm.reset({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
       console.error('Failed to update password', error);
-      toast.error('Failed to update password');
+      
+      // Handle specific error cases
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.data?.message || 'Unknown error occurred';
+        
+        if (status === 401) {
+          // Current password is incorrect
+          toast.error('Current password is incorrect');
+          passwordForm.setError('currentPassword', {
+            type: 'manual',
+            message: 'Current password is incorrect'
+          });
+        } else if (status === 400) {
+          // New password is the same as the old one or doesn't meet requirements
+          toast.error(errorMessage);
+          if (errorMessage.includes('same as')) {
+            passwordForm.setError('newPassword', {
+              type: 'manual',
+              message: 'New password must be different from your current password'
+            });
+          }
+        } else {
+          // Other server-side errors
+          toast.error(`Failed to update password: ${errorMessage}`);
+        }
+      } else if (error.request) {
+        // Network error - no response received
+        toast.error('Network error. Please check your connection and try again.');
+      } else {
+        // Something else happened while setting up the request
+        toast.error('Failed to update password. Please try again later.');
+      }
     } finally {
       setIsPasswordLoading(false);
     }
@@ -113,7 +159,7 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full">
-      <div className="container mx-auto">
+      <div className="container mx-auto max-w-4xl">
         <div className="mx-auto px-4 py-10">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
@@ -434,16 +480,16 @@ export default function ProfilePage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
+                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="currentPassword">Current Password</Label>
                         <Input
                           id="currentPassword"
                           type="password"
-                          {...register('currentPassword', { required: 'Current password is required' })}
+                          {...passwordForm.register('currentPassword', { required: 'Current password is required' })}
                         />
-                        {errors.currentPassword && (
-                          <p className="text-sm text-red-500">{errors.currentPassword.message as string}</p>
+                        {passwordForm.formState.errors.currentPassword && (
+                          <p className="text-sm text-red-500">{passwordForm.formState.errors.currentPassword.message as string}</p>
                         )}
                       </div>
                       
@@ -452,17 +498,48 @@ export default function ProfilePage() {
                         <Input
                           id="newPassword"
                           type="password"
-                          {...register('newPassword', { 
+                          {...passwordForm.register('newPassword', { 
                             required: 'New password is required',
                             minLength: {
                               value: 8,
                               message: 'Password must be at least 8 characters'
+                            },
+                            validate: {
+                              hasUpperCase: (value) => 
+                                /[A-Z]/.test(value) || 'Password must contain at least one uppercase letter',
+                              hasLowerCase: (value) => 
+                                /[a-z]/.test(value) || 'Password must contain at least one lowercase letter',
+                              hasNumber: (value) => 
+                                /[0-9]/.test(value) || 'Password must contain at least one number',
+                              hasSpecialChar: (value) => 
+                                /[!@#$%^&*(),.?":{}|<>]/.test(value) || 'Password must contain at least one special character'
                             }
                           })}
                         />
-                        {errors.newPassword && (
-                          <p className="text-sm text-red-500">{errors.newPassword.message as string}</p>
+                        {passwordForm.formState.errors.newPassword && (
+                          <p className="text-sm text-red-500">{passwordForm.formState.errors.newPassword.message as string}</p>
                         )}
+                        
+                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                          <p>Password requirements:</p>
+                          <ul className="list-disc list-inside space-y-1 pl-2">
+                            <li className={passwordForm.watch('newPassword')?.length >= 8 ? 'text-green-500' : ''}>
+                              At least 8 characters
+                            </li>
+                            <li className={/[A-Z]/.test(passwordForm.watch('newPassword') || '') ? 'text-green-500' : ''}>
+                              At least one uppercase letter
+                            </li>
+                            <li className={/[a-z]/.test(passwordForm.watch('newPassword') || '') ? 'text-green-500' : ''}>
+                              At least one lowercase letter
+                            </li>
+                            <li className={/[0-9]/.test(passwordForm.watch('newPassword') || '') ? 'text-green-500' : ''}>
+                              At least one number
+                            </li>
+                            <li className={/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.watch('newPassword') || '') ? 'text-green-500' : ''}>
+                              At least one special character
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                       
                       <div className="space-y-2">
@@ -470,15 +547,15 @@ export default function ProfilePage() {
                         <Input
                           id="confirmPassword"
                           type="password"
-                          {...register('confirmPassword', { 
+                          {...passwordForm.register('confirmPassword', { 
                             required: 'Please confirm your password',
-                            validate: (value) => 
-                              value === (document.getElementById('newPassword') as HTMLInputElement)?.value || 
+                            validate: (value, formValues) => 
+                              value === formValues.newPassword || 
                               'Passwords do not match'
                           })}
                         />
-                        {errors.confirmPassword && (
-                          <p className="text-sm text-red-500">{errors.confirmPassword.message as string}</p>
+                        {passwordForm.formState.errors.confirmPassword && (
+                          <p className="text-sm text-red-500">{passwordForm.formState.errors.confirmPassword.message as string}</p>
                         )}
                       </div>
                       
