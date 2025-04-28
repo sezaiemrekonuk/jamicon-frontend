@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, User } from "lucide-react"
+import Image from "next/image"
+import { Menu } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Icons } from "@/components/icons"
@@ -35,6 +36,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BRAND } from "@/lib/constants"
+import { NotificationDropdown, MobileNotifications } from "@/components/ui/notification-dropdown"
 
 interface NavbarProps {
   items?: NavItem[]
@@ -75,8 +78,7 @@ export function Navbar({
         {/* Logo - Left */}
         <div className="flex-shrink-0">
           <Link href="/" className="flex items-center space-x-2">
-            <Icons.logo className="h-6 w-6" />
-            <span className="font-bold text-xl">Acme Inc</span>
+            <Image src={BRAND.logo.src} alt={BRAND.logo.alt} width={BRAND.logo.width} height={BRAND.logo.height} />
           </Link>
         </div>
 
@@ -109,6 +111,8 @@ export function Navbar({
           </NavigationMenu>
 
           <div className="flex items-center space-x-4">
+            {isAuthenticated && <NotificationDropdown />}
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -214,6 +218,9 @@ export function Navbar({
 
                   return null
                 })}
+                
+                {isAuthenticated && <MobileNotifications />}
+                
                 <div className="pt-4 border-t">
                   {isAuthenticated ? (
                     <>
