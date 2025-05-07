@@ -1,17 +1,17 @@
-import { clsx, type ClassValue } from "clsx"
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(date: Date | string) {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+export function formatDate(date: string | Date): string {
+  return format(new Date(date), 'MMM d, yyyy')
+}
+
+export function formatDateRange(startDate: Date, endDate: Date): string {
+  return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`
 }
 
 export function truncateText(text: string, maxLength: number) {
@@ -19,11 +19,15 @@ export function truncateText(text: string, maxLength: number) {
   return text.substring(0, maxLength) + '...'
 }
 
-export function slugify(text: string): string {
+export const slugify = (text: string): string => {
   return text
+    .toString()
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
 }
 
 export const firebaseErrors = {

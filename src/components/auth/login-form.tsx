@@ -33,6 +33,9 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [emailForVerification, setEmailForVerification] = useState<string>("");
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   // Check for stored redirect from invitation flow
   useEffect(() => {
@@ -55,6 +58,7 @@ export function LoginForm() {
   const onSubmit = useCallback(async (data: LoginFormValues) => {
     setIsLoading(true);
     setError(null);
+    setShowResendVerification(false);
 
     try {
       await signIn(data);
@@ -72,8 +76,18 @@ export function LoginForm() {
       const errorMessage = error.message || "Authentication failed. Please check your credentials.";
       setError(errorMessage);
       
-      if (errorMessage.toLowerCase().includes("verify")) {
-        toast.error("Please verify your email before logging in");
+      if (errorMessage.includes("Please verify your email")) {
+        setError(
+          "Your email address has not been verified. Please check your inbox for the verification link or click resend below."
+        );
+        setShowResendVerification(true);
+        setEmailForVerification(data.email);
+        toast.error(
+          <div className="flex flex-col gap-1">
+            <span>Email verification required</span>
+            <span className="text-xs">Check your inbox for the verification link</span>
+          </div>
+        );
       } else {
         toast.error(errorMessage);
       }
@@ -81,6 +95,32 @@ export function LoginForm() {
       setIsLoading(false);
     }
   }, [signIn, router, redirectTarget]);
+
+  const handleResendVerification = async () => {
+    if (!emailForVerification) return;
+
+    setIsResendingVerification(true);
+    try {
+      // You'll need to implement this API endpoint
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailForVerification }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend verification email');
+      }
+      
+      toast.success('Verification email sent successfully. Please check your inbox.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resend verification email');
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
 
   const handleSocialLogin = useCallback(async (provider: "github" | "google") => {
     const setLoading = provider === "github" ? setIsGitHubLoading : setIsGoogleLoading;
@@ -120,8 +160,26 @@ export function LoginForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-              {error}
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md flex flex-col">
+              <span>{error}</span>
+              {showResendVerification && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleResendVerification}
+                  disabled={isResendingVerification}
+                  className="self-start mt-2 pl-0"
+                >
+                  {isResendingVerification ? (
+                    <>
+                      <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Resend verification email"
+                  )}
+                </Button>
+              )}
             </div>
           )}
           

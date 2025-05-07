@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchUserTeams } from '@/lib/services/team-service';
-import { Team } from '@/types/team';
+import { teamApi } from '@/lib/api/team';
+import { Team, TeamRole } from '@/types/team';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
@@ -21,7 +21,7 @@ export default function TeamList() {
   const loadTeams = async () => {
     try {
       setIsLoading(true);
-      const data = await fetchUserTeams();
+      const data = await teamApi.getUserTeams();
       setTeams(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load teams');

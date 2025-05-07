@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { acceptInvitation, rejectInvitation } from '@/lib/services/team-service';
+import { teamApi } from '@/lib/api/team';
 import { Team } from '@/types/team';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,7 +56,7 @@ export default function InvitationPage() {
     setError(null);
     
     try {
-      const acceptedTeam = await acceptInvitation(token);
+      const acceptedTeam = await teamApi.acceptInvitation(token);
       setTeam(acceptedTeam);
       setSuccess(true);
       toast.success(`You have joined the team "${acceptedTeam.name}"`);
@@ -83,7 +83,7 @@ export default function InvitationPage() {
     setError(null);
     
     try {
-      await rejectInvitation(token);
+      await teamApi.rejectInvitation(token);
       toast.success("You have declined the team invitation");
       
       // Redirect to teams page after 2 seconds

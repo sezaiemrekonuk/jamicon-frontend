@@ -20,6 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/avatar-upload';
 import { useAuth } from '@/lib/providers/auth-provider';
+import { UserProfileJams } from '@/components/profile/user-profile-jams';
+
 export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -172,6 +174,7 @@ export default function ProfilePage() {
             <Tabs defaultValue="profile" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="jams">My Jams</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
                 <TabsTrigger value="jam-experiences">Jam Experiences</TabsTrigger>
               </TabsList>
@@ -469,6 +472,10 @@ export default function ProfilePage() {
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+              
+              <TabsContent value="jams">
+                {authUser && <UserProfileJams userId={authUser.id} />}
               </TabsContent>
               
               <TabsContent value="security" className="space-y-6">

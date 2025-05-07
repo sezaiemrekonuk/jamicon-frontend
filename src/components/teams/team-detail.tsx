@@ -73,6 +73,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { TeamJams } from '@/components/teams/team-jams';
 
 interface TeamDetailProps {
   slug: string;
@@ -144,7 +145,7 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
 
   // Check if current user is admin
   const isAdmin = team?.members.some(
-    (member) => member.userId === currentUserId && member.teamRole === TeamRole.ADMIN
+    (member) => member.userId === currentUserId && member.teamRole === 'ADMIN'
   ) || false;
 
   useEffect(() => {
@@ -162,7 +163,7 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
         
         // If user is admin, fetch pending invitations
         if (teamData.members.some(
-          (member) => member.userId === currentUserId && member.teamRole === TeamRole.ADMIN
+          (member) => member.userId === currentUserId && member.teamRole === 'ADMIN'
         )) {
           const invitations = await getTeamPendingInvitations(teamData.id);
           setPendingInvitations(invitations);
@@ -494,10 +495,14 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
         </Card>
 
         <Tabs defaultValue="members" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="members" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Members
+            </TabsTrigger>
+            <TabsTrigger value="jams" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Jams
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -683,6 +688,22 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
             )}
           </TabsContent>
           
+          <TabsContent value="jams" className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Team Jams
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Game jams this team is participating in or has applied to
+                </p>
+              </div>
+            </div>
+            
+            {team && <TeamJams teamId={team.id} isAdmin={isAdmin} />}
+          </TabsContent>
+          
           <TabsContent value="settings" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <div>
@@ -821,7 +842,7 @@ function MemberCard({
               {member.user.username || member.user.email}
             </p>
             {isCurrentUser && <Badge variant="outline" className="text-xs px-1.5 py-0">You</Badge>}
-            {member.teamRole === TeamRole.ADMIN && (
+            {member.teamRole === 'ADMIN' && (
               <Badge variant="default" className="bg-primary text-xs">Admin</Badge>
             )}
           </div>
@@ -833,7 +854,7 @@ function MemberCard({
       
       {isAdmin && !isCurrentUser && (
         <div className="flex items-center gap-2">
-          {member.teamRole !== TeamRole.ADMIN && (
+          {member.teamRole !== 'ADMIN' && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

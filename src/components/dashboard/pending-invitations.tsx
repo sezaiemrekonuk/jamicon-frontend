@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getUserPendingInvitations, acceptInvitation, rejectInvitation } from '@/lib/services/team-service';
+import { teamApi } from '@/lib/api/team';
 import { TeamInvitation } from '@/types/team';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ export function PendingInvitations() {
   useEffect(() => {
     const fetchInvitations = async () => {
       try {
-        const data = await getUserPendingInvitations();
+        const data = await teamApi.getUserPendingInvitations();
         setInvitations(data);
       } catch (error) {
         console.error('Error fetching invitations:', error);
@@ -35,7 +35,7 @@ export function PendingInvitations() {
     setActionInProgress({ ...actionInProgress, [invitation.id]: true });
     
     try {
-      const team = await acceptInvitation(invitation.token);
+      const team = await teamApi.acceptInvitation(invitation.token);
       
       // Remove the invitation from the list
       setInvitations(invitations.filter(inv => inv.id !== invitation.id));
@@ -56,7 +56,7 @@ export function PendingInvitations() {
     setActionInProgress({ ...actionInProgress, [invitation.id]: true });
     
     try {
-      await rejectInvitation(invitation.token);
+      await teamApi.rejectInvitation(invitation.token);
       
       // Remove the invitation from the list
       setInvitations(invitations.filter(inv => inv.id !== invitation.id));

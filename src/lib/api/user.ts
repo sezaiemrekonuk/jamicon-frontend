@@ -1,12 +1,12 @@
 import { apiClient } from './client';
 import { User } from '@/types/user';
 
-const API_BASE = '/users';
+const API_BASE = '/api/users';
 
 export const userApi = {
   // Get current user
   getCurrentUser: async (): Promise<User> => {
-    const response = await apiClient.get(`/auth/me`);
+    const response = await apiClient.get(`${API_BASE}/auth/me`);
     return response.data.data.user;
   },
 

@@ -2,6 +2,40 @@ import { NavItem } from "@/types/navigation"
 
 export const navigationConfig: NavItem[] = [
   {
+    type: "link",
+    title: "Home",
+    href: "/"
+  },
+  {
+    type: "link",
+    title: "Game Jams",
+    href: "/jams"
+  },
+  {
+    type: "dropdown",
+    title: "Community",
+    items: [
+      {
+        type: "link-with-description",
+        title: "Teams",
+        href: "/teams",
+        description: "Find or create teams for game development."
+      },
+      {
+        type: "link-with-description",
+        title: "Games",
+        href: "/games",
+        description: "Discover games created by the community."
+      },
+      {
+        type: "link-with-description",
+        title: "Members",
+        href: "/users",
+        description: "Connect with other game developers."
+      }
+    ]
+  },
+  {
     type: "dropdown",
     title: "Getting Started",
     items: [

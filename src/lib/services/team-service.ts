@@ -1,27 +1,28 @@
 import { 
   Team, 
+  TeamWithMembers,
   CreateTeamRequest, 
   UpdateTeamRequest, 
   CreateInvitationRequest,
   TeamInvitation,
   UpdateRoleRequest
 } from "@/types/team";
+import { teamApi } from "../api/team";
 import { apiClient } from "../api/client";
 import { slugify } from "../utils";
 
+// Re-export the team API functions with additional error handling
 export async function fetchUserTeams(): Promise<Team[]> {
   try {
-    const response = await apiClient.get('/teams/user');
-    return response.data.data.teams;
+    return await teamApi.getUserTeams();
   } catch (error) {
     throw new Error(`Error fetching teams: ${error}`);
   }
 }
 
-export async function fetchTeamById(teamId: string): Promise<Team> {
+export async function fetchTeamById(teamId: string): Promise<TeamWithMembers> {
   try {
-    const response = await apiClient.get(`/teams/${teamId}`);
-    return response.data.data.team;
+    return await teamApi.getTeamById(teamId);
   } catch (error: any) {
     if (error.response?.status === 403) {
       throw new Error("You must be a member of this team to view its details");
@@ -30,10 +31,9 @@ export async function fetchTeamById(teamId: string): Promise<Team> {
   }
 }
 
-export async function fetchTeamBySlug(slug: string): Promise<Team> {
+export async function fetchTeamBySlug(slug: string): Promise<TeamWithMembers> {
   try {
-    const response = await apiClient.get(`/teams/slug/${slug}`);
-    return response.data.data.team;
+    return await teamApi.getTeamBySlug(slug);
   } catch (error: any) {
     if (error.response?.status === 403) {
       throw new Error("You must be a member of this team to view its details");
@@ -49,8 +49,7 @@ export async function createTeam(teamData: CreateTeamRequest): Promise<Team> {
       teamData.slug = slugify(teamData.name);
     }
     
-    const response = await apiClient.post('/teams', teamData);
-    return response.data.data.team;
+    return await teamApi.createTeam(teamData);
   } catch (error) {
     throw new Error(`Error creating team: ${error}`);
   }
@@ -63,8 +62,7 @@ export async function updateTeam(teamId: string, teamData: UpdateTeamRequest): P
       teamData.slug = slugify(teamData.name);
     }
     
-    const response = await apiClient.patch(`/teams/${teamId}`, teamData);
-    return response.data.data.team;
+    return await teamApi.updateTeam(teamId, teamData);
   } catch (error) {
     throw new Error(`Error updating team: ${error}`);
   }
@@ -72,15 +70,17 @@ export async function updateTeam(teamId: string, teamData: UpdateTeamRequest): P
 
 export async function deleteTeam(teamId: string): Promise<void> {
   try {
-    await apiClient.delete(`/teams/${teamId}`);
+    await teamApi.deleteTeam(teamId);
   } catch (error) {
     throw new Error(`Error deleting team: ${error}`);
   }
 }
 
+// The following functions use the direct API endpoints until they are added to teamApi
+
 export async function createInvitation(invitationData: CreateInvitationRequest): Promise<{invitationId: string, token: string}> {
   try {
-    const response = await apiClient.post('/teams/invitations', invitationData);
+    const response = await apiClient.post('/api/teams/invitations', invitationData);
     return response.data.data;
   } catch (error) {
     throw new Error(`Error creating invitation: ${error}`);
@@ -89,7 +89,7 @@ export async function createInvitation(invitationData: CreateInvitationRequest):
 
 export async function acceptInvitation(token: string): Promise<Team> {
   try {
-    const response = await apiClient.post(`/teams/invitations/${encodeURIComponent(token)}/accept`);
+    const response = await apiClient.post(`/api/teams/invitations/${encodeURIComponent(token)}/accept`);
     return response.data.data.team;
   } catch (error: any) {
     console.error('API error accepting invitation:', error.response?.data || error);
@@ -102,7 +102,7 @@ export async function acceptInvitation(token: string): Promise<Team> {
 
 export async function rejectInvitation(token: string): Promise<void> {
   try {
-    await apiClient.post(`/teams/invitations/${encodeURIComponent(token)}/reject`);
+    await apiClient.post(`/api/teams/invitations/${encodeURIComponent(token)}/reject`);
   } catch (error: any) {
     console.error('API error rejecting invitation:', error.response?.data || error);
     if (error.response?.data?.message) {
@@ -114,7 +114,7 @@ export async function rejectInvitation(token: string): Promise<void> {
 
 export async function getUserPendingInvitations(): Promise<TeamInvitation[]> {
   try {
-    const response = await apiClient.get('/teams/invitations/pending');
+    const response = await apiClient.get('/api/teams/invitations/pending');
     return response.data.data.invitations;
   } catch (error) {
     throw new Error(`Error fetching pending invitations: ${error}`);
@@ -123,7 +123,7 @@ export async function getUserPendingInvitations(): Promise<TeamInvitation[]> {
 
 export async function getTeamPendingInvitations(teamId: string): Promise<{id: string, email: string, createdAt: Date, expiresAt: Date}[]> {
   try {
-    const response = await apiClient.get(`/teams/${teamId}/invitations/pending`);
+    const response = await apiClient.get(`/api/teams/${teamId}/invitations/pending`);
     return response.data.data.invitations;
   } catch (error) {
     throw new Error(`Error fetching team pending invitations: ${error}`);
@@ -132,7 +132,7 @@ export async function getTeamPendingInvitations(teamId: string): Promise<{id: st
 
 export async function cancelInvitation(teamId: string, invitationId: string): Promise<void> {
   try {
-    await apiClient.delete(`/teams/${teamId}/invitations/${invitationId}`);
+    await apiClient.delete(`/api/teams/${teamId}/invitations/${invitationId}`);
   } catch (error) {
     throw new Error(`Error canceling invitation: ${error}`);
   }
@@ -140,7 +140,7 @@ export async function cancelInvitation(teamId: string, invitationId: string): Pr
 
 export async function transferTeamOwnership(teamId: string, userId: string): Promise<Team> {
   try {
-    const response = await apiClient.patch(`/teams/${teamId}/transfer-ownership`, { userId, teamRole: 'ADMIN' });
+    const response = await apiClient.patch(`/api/teams/${teamId}/transfer-ownership`, { userId, teamRole: 'ADMIN' });
     return response.data.data.team;
   } catch (error) {
     throw new Error(`Error transferring ownership: ${error}`);
@@ -149,7 +149,7 @@ export async function transferTeamOwnership(teamId: string, userId: string): Pro
 
 export async function updateMemberRole(teamId: string, roleData: UpdateRoleRequest): Promise<Team> {
   try {
-    const response = await apiClient.patch(`/teams/${teamId}/members/role`, roleData);
+    const response = await apiClient.patch(`/api/teams/${teamId}/members/role`, roleData);
     return response.data.data.team;
   } catch (error) {
     throw new Error(`Error updating member role: ${error}`);
@@ -158,8 +158,7 @@ export async function updateMemberRole(teamId: string, roleData: UpdateRoleReque
 
 export async function removeMember(teamId: string, memberId: string): Promise<Team> {
   try {    
-    // Get the member first to get the user ID
-    const response = await apiClient.delete(`/teams/${teamId}/members/${memberId}`);
+    const response = await apiClient.delete(`/api/teams/${teamId}/members/${memberId}`);
     return response.data.data.team;
   } catch (error: any) {
     console.error('Error removing member:', error.response?.data || error);
@@ -172,7 +171,7 @@ export async function removeMember(teamId: string, memberId: string): Promise<Te
 
 export async function resendInvitation(teamId: string, invitationId: string): Promise<void> {
   try {
-    await apiClient.post(`/teams/${teamId}/invitations/${invitationId}/resend`);
+    await apiClient.post(`/api/teams/${teamId}/invitations/${invitationId}/resend`);
   } catch (error) {
     throw new Error(`Error resending invitation: ${error}`);
   }

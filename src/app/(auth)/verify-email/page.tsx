@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Loader2, MailCheck, RefreshCw } from "lucide-react";
+import { setCookie } from "cookies-next";
 
 export default function VerifyEmailPage() {
     const router = useRouter();
@@ -16,20 +17,40 @@ export default function VerifyEmailPage() {
     const [error, setError] = useState<string | null>(null);
     const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
     const [countdown, setCountdown] = useState(0);
+    const [autoLoginMessage, setAutoLoginMessage] = useState<string | null>(null);
 
-    // Handle automatic verification from URL params
+    // Handle automatic verification and login from URL params
     useEffect(() => {
         const oobCode = searchParams.get("oobCode");
         const statusParam = searchParams.get("status");
         const message = searchParams.get("message");
+        const accessToken = searchParams.get("accessToken");
+        const refreshToken = searchParams.get("refreshToken");
         
-        if (user?.emailVerified || !oobCode) {
+        if (user?.emailVerified) {
             router.push("/");
             return;
         }
 
         if (oobCode) {
-            // If status is already provided by the backend
+            // If both status and tokens are provided by the backend, perform auto login
+            if (statusParam === "success" && accessToken && refreshToken) {
+                setStatus("success");
+                setAutoLoginMessage("Your email has been verified! Logging you in automatically...");
+                
+                // Store tokens in cookies
+                setCookie("accessToken", accessToken);
+                setCookie("refreshToken", refreshToken);
+                
+                // Redirect to home page after a short delay
+                setTimeout(() => {
+                    router.push("/");
+                    window.location.reload(); // Force reload to update authentication state
+                }, 2000);
+                return;
+            }
+            
+            // If just status is provided by the backend
             if (statusParam === "success") {
                 setStatus("success");
                 setTimeout(() => {
@@ -56,7 +77,7 @@ export default function VerifyEmailPage() {
                     setError(err.message || "Failed to verify your email");
                 });
         }
-    }, [searchParams, verifyEmail, router]);
+    }, [searchParams, verifyEmail, router, user]);
     
     // Handle resend countdown
     useEffect(() => {
@@ -200,7 +221,8 @@ export default function VerifyEmailPage() {
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                             <AlertTitle className="text-green-700">Success!</AlertTitle>
                             <AlertDescription className="text-green-600">
-                                Your email has been successfully verified. You will be redirected to the home page in a few seconds.
+                                {autoLoginMessage || 
+                                 "Your email has been successfully verified. You will be redirected to the home page in a few seconds."}
                             </AlertDescription>
                         </Alert>
                     )}

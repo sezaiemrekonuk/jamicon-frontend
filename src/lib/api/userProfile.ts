@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 import { UserProfile, UpsertUserProfileFormData, JamExperience, JamExperienceFormData } from '@/types/user';
 
-const API_BASE = '/user-profiles';
+const API_BASE = '/api/user-profiles';
 
 export const userProfileApi = {
   // Get the current user's profile

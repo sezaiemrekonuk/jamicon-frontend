@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createTeam } from '@/lib/services/team-service';
+import { teamApi } from '@/lib/api/team';
 import { CreateTeamRequest } from '@/types/team';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,7 +77,7 @@ export default function CreateTeamForm() {
     }
 
     try {
-      const result = await createTeam(requestData);
+      const result = await teamApi.createTeam(requestData);
       toast({
         title: "Team created!",
         description: `${result.name} has been successfully created.`,
