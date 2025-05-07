@@ -1,8 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { User } from "../services/api-service";
-import { getApiService } from "../services/api-service";
+import { User, authApi } from "../api/auth";
 import Loading from "@/components/loading";
 import { LoginFormValues, RegisterFormValues } from "../auth-schema";
 import { getCookie } from "cookies-next";
@@ -33,7 +32,6 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [status, setStatus] = useState<"loading" | "unauthenticated" | "authenticated">("loading");
-    const apiService = getApiService();
 
     useEffect(() => {
         const loadUser = async () => {
@@ -46,15 +44,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 // Fetch user data
-                const userData = await apiService.getMe();
+                const userData = await authApi.getMe();
                 setUser(userData);
                 setStatus("authenticated");
             } catch (error) {
                 // Try to refresh token if getting user fails
                 try {
-                    await apiService.refreshToken();
+                    await authApi.refreshToken();
                     // Try getting user again after token refresh
-                    const userData = await apiService.getMe();
+                    const userData = await authApi.getMe();
                     setUser(userData);
                     setStatus("authenticated");
                 } catch (refreshError) {
@@ -71,24 +69,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         status,
         user,
         signIn: async (data: LoginFormValues) => {
-            const response = await apiService.login(data);
+            const response = await authApi.login(data);
             setUser(response.user);
             setStatus("authenticated");
             return response.user;
         },
         signUp: async (data: RegisterFormValues) => {
-            const response = await apiService.register(data);
+            const response = await authApi.register(data);
             setUser(response.user);
             setStatus("authenticated");
             return response.user;
         },
         logout: async () => {
-            await apiService.logout();
+            await authApi.logout();
             setUser(null);
             setStatus("unauthenticated");
         },
         verifyEmail: async (token: string) => {
-            const user = await apiService.verifyEmail(token);
+            const user = await authApi.verifyEmail(token);
             // Only update user if this is the current user
             if (user && user.id === user?.id) {
                 setUser({
@@ -99,13 +97,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return user;
         },
         resendVerificationEmail: async () => {
-            await apiService.resendVerificationEmail();
+            await authApi.resendVerificationEmail();
         },
         forgotPassword: async (email: string) => {
-            await apiService.forgotPassword(email);
+            await authApi.forgotPassword(email);
         },
         resetPassword: async (token: string, password: string) => {
-            const user = await apiService.resetPassword(token, password);
+            const user = await authApi.resetPassword(token, password);
             return user;
         },
         updateUserInfo: (updatedUser: Partial<User>) => {

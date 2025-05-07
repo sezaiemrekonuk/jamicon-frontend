@@ -7,5 +7,3 @@ export const BRAND = {
     },
     name: "gamegine",
 }
-
-export const BRAND_NAME = "gamegine"

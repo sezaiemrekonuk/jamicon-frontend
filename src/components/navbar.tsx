@@ -141,6 +141,9 @@ export function Navbar({
                   <DropdownMenuItem asChild>
                     <Link href="/teams">Teams</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/jams">Game Jams</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     Log out
@@ -242,6 +245,9 @@ export function Navbar({
                       </Link>
                       <Link href="/teams" className="block text-sm font-medium hover:underline mb-2">
                         Teams
+                      </Link>
+                      <Link href="/jams" className="block text-sm font-medium hover:underline mb-2">
+                        Game Jams
                       </Link>
                       <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
                         Log out
