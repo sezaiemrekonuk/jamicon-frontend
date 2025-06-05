@@ -70,10 +70,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TeamJams } from '@/components/teams/team-jams';
+import { jamTeamApi } from '@/lib/api/jam-team';
+import { gameApi } from '@/lib/api/game';
+import { waitlistApi } from '@/lib/api/waitlist';
+import { teamApi as teamRequestApi } from '@/lib/api/team';
+import { TeamJoinRequest } from '@/types/team-join-request';
 
 interface TeamDetailProps {
   slug: string;
@@ -108,6 +113,8 @@ interface MemberCardProps {
 export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
   const router = useRouter();
   const [team, setTeam] = useState<Team | null>(null);
+  const [isListed, setIsListed] = useState<boolean>(false);
+  const [listingLoading, setListingLoading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingInvitations, setPendingInvitations] = useState<{ id: string; email: string; createdAt: Date; expiresAt: Date }[]>([]);
@@ -142,6 +149,15 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
   const [memberToPromote, setMemberToPromote] = useState<TeamMember | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
   const [isRemoving, setIsRemoving] = useState<{[key: string]: boolean}>({});
+  const [teamJamsData, setTeamJamsData] = useState<any[]>([]);
+  const [uploadJams, setUploadJams] = useState<any[]>([]);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const { register, handleSubmit, reset } = useForm<{jamId: string; name: string; slug: string; build: FileList; photos: FileList}>();
+
+  // Join request state (for team admins)
+  const [joinRequests, setJoinRequests] = useState<TeamJoinRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
   // Check if current user is admin
   const isAdmin = team?.members.some(
@@ -168,6 +184,19 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
           const invitations = await getTeamPendingInvitations(teamData.id);
           setPendingInvitations(invitations);
         }
+
+        // After loading team, load join requests if admin
+        if (teamData.members.some(m => m.userId === currentUserId && m.teamRole === 'ADMIN')) {
+          setIsLoadingRequests(true);
+          try {
+            const requests = await teamRequestApi.getTeamJoinRequests(teamData.id);
+            setJoinRequests(requests);
+          } catch (e) {
+            console.error('Error fetching join requests', e);
+          } finally {
+            setIsLoadingRequests(false);
+          }
+        }
       } catch (err) {
         console.error('Team loading error:', err);
         setError(err instanceof Error ? err.message : 'Failed to load team details');
@@ -178,6 +207,49 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
 
     loadTeam();
   }, [slug, currentUserId, editForm]);
+
+  // After team loads, fetch team jams
+  useEffect(() => {
+    if (!team) return;
+    const loadTeamJams = async () => {
+      try {
+        const data = await jamTeamApi.getTeamJams(team.id);
+        setTeamJamsData(data);
+        
+        // Filter jams that are:
+        // 1. The team is participating in
+        // 2. Currently active (within start and end dates)
+        const now = new Date();
+        const activeJams = data.filter((j: any) => {
+          const isParticipating = j.status === 'participating';
+          if (!j || !j.startDate || !j.endDate) return false;
+          const startDate = new Date(j.startDate);
+          const endDate = new Date(j.endDate);
+          const isActive = now >= startDate && now <= endDate;
+          return isParticipating && isActive;
+        });
+        
+        setUploadJams(activeJams);
+      } catch (err) {
+        console.error('Error loading team jams:', err);
+      }
+    };
+    loadTeamJams();
+  }, [team]);
+
+  useEffect(() => {
+    if (!team) return;
+    // Check if this team is already listed globally
+    const checkListing = async () => {
+      try {
+        const listings = await waitlistApi.getGlobalWaitlists();
+        setIsListed(listings.some(l => l.teamId === team.id));
+      } catch {
+        // ignore
+      }
+    };
+    checkListing();
+  }, [team]);
 
   const handleEditTeam = async (values: z.infer<typeof editTeamSchema>) => {
     if (!team) return;
@@ -313,6 +385,111 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
       toast.success("The invitation has been resent successfully");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to resend invitation');
+    }
+  };
+
+  // List this team on the global waitlist
+  const handleListTeam = async () => {
+    if (!team) return;
+    setListingLoading(true);
+    try {
+      await waitlistApi.listTeam(team.id);
+      setIsListed(true);
+      toast.success('Your team is now looking for members');
+    } catch (err: any) {
+      console.error('List team error:', err);
+      toast.error(err.response?.data?.message || 'Failed to list team for waitlist');
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
+  // Remove this team from the global waitlist
+  const handleUnlistTeam = async () => {
+    if (!team) return;
+    setListingLoading(true);
+    try {
+      await waitlistApi.unlistTeam(team.id);
+      setIsListed(false);
+      toast.success('Your team is no longer looking for members');
+    } catch (err: any) {
+      console.error('Unlist team error:', err);
+      toast.error(err.response?.data?.message || 'Failed to remove team from waitlist');
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
+  const onUpload: SubmitHandler<{jamId: string; name: string; slug: string; build: FileList; photos: FileList}> = async (data) => {
+    try {
+      setIsUploading(true);
+      
+      const formData = new FormData();
+      formData.append('teamId', team!.id);
+      formData.append('name', data.name);
+      formData.append('slug', data.slug || data.name.toLowerCase().replace(/\s+/g, '-'));
+      
+      // Make sure build file is attached
+      if (data.build && data.build[0]) {
+        console.log('Attaching build file:', data.build[0].name);
+        formData.append('build', data.build[0]);
+      } else {
+        toast.error('Please select a build file');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Add photos if any
+      if (data.photos) {
+        Array.from(data.photos).forEach((photo: File, index: number) => {
+          console.log(`Attaching photo ${index}:`, photo.name);
+          formData.append('photos', photo);
+        });
+      }
+      
+      // Show loading state
+      const loadingToast = toast.loading('Uploading game...');
+      
+      const newGame = await gameApi.uploadGameToJam(data.jamId, formData);
+      
+      toast.dismiss(loadingToast);
+      toast.success('Game uploaded successfully!');
+      setIsUploadOpen(false);
+      reset();
+      
+      // Refresh page to show the new game
+      window.location.reload();
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to upload game';
+      toast.error(errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    if (!team) return;
+    try {
+      await teamRequestApi.acceptJoinRequest(team.id, requestId);
+      setJoinRequests(prev => prev.filter(r => r.id !== requestId));
+      toast.success('Join request accepted');
+      // Optionally refresh team members
+      const updated = await fetchTeamBySlug(slug);
+      setTeam(updated);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    if (!team) return;
+    try {
+      await teamRequestApi.rejectJoinRequest(team.id, requestId);
+      setJoinRequests(prev => prev.filter(r => r.id !== requestId));
+      toast.success('Join request rejected');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to reject request');
     }
   };
 
@@ -484,6 +661,21 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
                     </DialogContent>
                   </Dialog>
                   
+                  {listingLoading ? (
+                    <Button disabled size="sm" className="gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </Button>
+                  ) : isListed ? (
+                    <Button variant="destructive" size="sm" onClick={handleUnlistTeam}>
+                      Stop Looking for Members
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={handleListTeam}>
+                      Looking for Members
+                    </Button>
+                  )}
+                  
                   <Button variant="destructive" size="sm" className="gap-2" onClick={handleDeleteTeam}>
                     <Trash className="h-4 w-4" />
                     Delete Team
@@ -495,7 +687,7 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
         </Card>
 
         <Tabs defaultValue="members" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="members" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Members
@@ -504,6 +696,12 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
               <Calendar className="h-4 w-4" />
               Jams
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="requests" className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Requests
+              </TabsTrigger>
+            )}
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Settings
@@ -692,17 +890,108 @@ export default function TeamDetail({ slug, currentUserId }: TeamDetailProps) {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
+                  <Calendar className="h-4 w-4 text-primary" />
                   Team Jams
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Game jams this team is participating in or has applied to
                 </p>
               </div>
+              {isAdmin && (
+                <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                  <DialogTrigger asChild>
+                    {uploadJams.length > 0 ? (
+                      <Button variant="outline" size="sm">Upload Game</Button>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled title="No active jams available">
+                        Upload Game
+                      </Button>
+                    )}
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Upload Game to Team Jam</DialogTitle>
+                    </DialogHeader>
+                    {uploadJams.length > 0 ? (
+                      <form onSubmit={handleSubmit(onUpload)} className="space-y-4">
+                        <div>
+                          <Label>Jam</Label>
+                          <select {...register('jamId')} className="w-full">
+                            {uploadJams.map(j => (
+                              <option key={j.jamId} value={j.jamId}>{j.jamName}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label>Game Name</Label>
+                          <Input {...register('name', { required: true })} />
+                        </div>
+                        <div>
+                          <Label>Slug</Label>
+                          <Input {...register('slug', { required: true })} />
+                        </div>
+                        <div>
+                          <Label>Build (.zip,.7z,.rar)</Label>
+                          <Input type="file" accept=".zip,.7z,.rar" {...register('build', { required: true })} />
+                        </div>
+                        <div>
+                          <Label>Photos (optional)</Label>
+                          <Input type="file" accept="image/*" multiple {...register('photos')} />
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" type="button" onClick={() => setIsUploadOpen(false)} disabled={isUploading}>Cancel</Button>
+                          <Button type="submit" disabled={isUploading}>
+                            {isUploading ? (
+                              <>
+                                <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Uploading...
+                              </>
+                            ) : 'Upload'}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <p className="text-muted-foreground mb-2">No active jams available for submission</p>
+                        <p className="text-sm">Your team is either not participating in any jams, or all jams are not currently active.</p>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
-            
             {team && <TeamJams teamId={team.id} isAdmin={isAdmin} />}
           </TabsContent>
+          
+          {isAdmin && (
+            <TabsContent value="requests" className="space-y-4">
+              {isLoadingRequests ? (
+                <p>Loading requests...</p>
+              ) : joinRequests.length > 0 ? (
+                <div className="space-y-4">
+                  {joinRequests.map(req => (
+                    <Card key={req.id}>
+                      <CardContent className="flex justify-between items-center p-4">
+                        <div>
+                          <p className="font-medium">{req.username || 'Unknown User'}</p>
+                          {req.message && <p className="text-sm text-muted-foreground">"{req.message}"</p>}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>Accept</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleRejectRequest(req.id)}>Reject</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground">No pending join requests.</p>
+              )}
+            </TabsContent>
+          )}
           
           <TabsContent value="settings" className="space-y-6">
             <div className="flex justify-between items-center mb-4">

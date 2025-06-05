@@ -10,7 +10,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { jamApi } from "@/lib/api/jam";
+import { useJams, JamFilter } from "@/lib/hooks/useJams";
 import { Jam, Visibility } from "@/types/jam";
 import { useAuth } from "@/lib/providers/auth-provider";
 import { CalendarDays, PlusCircle, Search } from "lucide-react";
@@ -25,9 +25,13 @@ export default function JamsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [jams, setJams] = useState<Jam[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<JamFilter>("all");
+  // Fetch jams from API with React Query
+  const { data: jams = [], isLoading: loading, error: queryError } = useJams(activeTab);
+  // Optionally log API errors
+  useEffect(() => {
+    if (queryError) console.error("Error loading jams:", queryError);
+  }, [queryError]);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibility, setVisibility] = useState<Visibility | "">("");
   
@@ -47,35 +51,10 @@ export default function JamsPage() {
     } else {
       setActiveTab("all");
     }
-    
-    loadJams();
   }, [searchParams]);
   
-  const loadJams = async () => {
-    setLoading(true);
-    try {
-      let fetchedJams: Jam[] = [];
-      
-      if (featured) {
-        fetchedJams = await jamApi.getFeaturedJams();
-      } else if (trending) {
-        fetchedJams = await jamApi.getTrendingJams();
-      } else if (active) {
-        fetchedJams = await jamApi.getActiveJams();
-      } else {
-        fetchedJams = await jamApi.getAllJams();
-      }
-      
-      setJams(fetchedJams);
-    } catch (error) {
-      console.error("Error loading jams:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
+    setActiveTab(value as JamFilter);
     
     // Update URL based on selected tab
     switch (value) {

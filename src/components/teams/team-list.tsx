@@ -11,34 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { useUserTeams } from '@/lib/hooks/useTeam';
 
 export default function TeamList() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Use React Query to fetch and cache user teams
+  const { data: teams = [], isLoading, error, isFetching, refetch } = useUserTeams();
 
-  const loadTeams = async () => {
-    try {
-      setIsLoading(true);
-      const data = await teamApi.getUserTeams();
-      setTeams(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load teams');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadTeams();
-  };
-
-  useEffect(() => {
-    loadTeams();
-  }, []);
+  // Refresh teams list
+  const handleRefresh = () => refetch();
 
   return (
     <div className="space-y-6">
@@ -54,9 +34,9 @@ export default function TeamList() {
             variant="outline" 
             size="sm" 
             onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
+            disabled={isLoading || isFetching}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button asChild>
@@ -97,7 +77,7 @@ export default function TeamList() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error instanceof Error ? error.message : error}</AlertDescription>
         </Alert>
       ) : teams.length === 0 ? (
         <Card className="bg-muted/40 border-dashed border-2 p-8">

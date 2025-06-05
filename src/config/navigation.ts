@@ -32,6 +32,12 @@ export const navigationConfig: NavItem[] = [
         title: "Members",
         href: "/users",
         description: "Connect with other game developers."
+      },
+      {
+        type: "link-with-description",
+        title: "Find Teams",
+        href: "/find-teams",
+        description: "Join teams looking for members."
       }
     ]
   },

@@ -11,11 +11,12 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { jamApi } from "@/lib/api/jam";
+import { useJam } from "@/lib/hooks/useJam";
 import { JamWithTeamsAndGames } from "@/types/jam";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { useParams } from "next/navigation";
 
@@ -31,31 +32,22 @@ export default function JamPage({ params }: JamPageProps) {
   const slug = routeParams.slug;
   const router = useRouter();
   
-  const [jam, setJam] = useState<JamWithTeamsAndGames | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
-  // Load jam data
-  useEffect(() => {
-    const loadJam = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const jamData = await jamApi.getJamBySlug(slug);
-        setJam(jamData);
-      } catch (error) {
-        console.error("Error loading jam:", error);
-        setError("Failed to load jam details. It may have been deleted or you may not have permission to view it.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadJam();
-  }, [slug]);
+  // Fetch jam details with React Query
+  const { data: jam, isLoading: loading, error: queryError } = useJam(slug);
+  // Only show an error message if the query actually errored
+  let errorMessage: string | null = null;
+  if (queryError) {
+    if (queryError instanceof Error) {
+      errorMessage = queryError.message;
+    } else if (typeof queryError === 'string') {
+      errorMessage = queryError;
+    } else {
+      errorMessage = 'Failed to load jam details.';
+    }
+  }
   
   // Handle jam deletion
   const handleDeleteJam = async () => {
@@ -100,7 +92,7 @@ export default function JamPage({ params }: JamPageProps) {
   }
   
   // Show error message if jam failed to load
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Link 
@@ -116,7 +108,7 @@ export default function JamPage({ params }: JamPageProps) {
             Jam Not Found
           </h1>
           <p className="text-red-700 dark:text-red-400 mb-4">
-            {error}
+            {errorMessage}
           </p>
           <Button asChild>
             <Link href="/jams">Go to Jams</Link>
@@ -126,7 +118,7 @@ export default function JamPage({ params }: JamPageProps) {
     );
   }
   
-  // Jam not found
+  // Jam not found (no error but also no data)
   if (!jam) {
     return (
       <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">

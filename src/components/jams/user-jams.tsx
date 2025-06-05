@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { jamApi } from "@/lib/api/jam";
-import { Jam } from "@/types/jam";
+import { useState } from "react";
+import { useUserCreatedJams, useUserAttendedJams } from "@/lib/hooks/useProfileJams";
 import { JamGrid } from "./jam-grid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,39 +18,12 @@ export function UserJams({ userId, defaultTab = "created" }: UserJamsProps) {
   const { user } = useAuth();
   const isOwnProfile = user?.id === userId;
   
-  const [activeTab, setActiveTab] = useState<string>(defaultTab);
-  const [createdJams, setCreatedJams] = useState<Jam[]>([]);
-  const [attendedJams, setAttendedJams] = useState<Jam[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const loadJams = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Load created jams if that tab is active or it's the initial load
-        if (activeTab === "created" || !createdJams.length) {
-          const created = await jamApi.getUserCreatedJams(userId);
-          setCreatedJams(created);
-        }
-        
-        // Load attended jams if that tab is active or it's the initial load
-        if (activeTab === "attended" || !attendedJams.length) {
-          const attended = await jamApi.getUserAttendedJams(userId);
-          setAttendedJams(attended);
-        }
-      } catch (error) {
-        console.error("Error loading jams:", error);
-        setError("Failed to load jams. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadJams();
-  }, [userId, activeTab]);
+  const [activeTab, setActiveTab] = useState<"created" | "attended">(defaultTab);
+  // React Query hooks for created and attended jams, lazy-loaded by active tab
+  const { data: createdJams = [], isLoading: loadingCreated, error: errorCreated } = useUserCreatedJams(userId, activeTab === "created");
+  const { data: attendedJams = [], isLoading: loadingAttended, error: errorAttended } = useUserAttendedJams(userId, activeTab === "attended");
+  const loading = activeTab === "created" ? loadingCreated : loadingAttended;
+  const error = activeTab === "created" ? errorCreated : errorAttended;
   
   return (
     <div className="space-y-4">
@@ -68,7 +40,7 @@ export function UserJams({ userId, defaultTab = "created" }: UserJamsProps) {
         )}
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as "created" | "attended")}>
         <TabsList className="mb-4">
           <TabsTrigger value="created">
             Created
@@ -91,7 +63,7 @@ export function UserJams({ userId, defaultTab = "created" }: UserJamsProps) {
         <TabsContent value="created">
           <JamGrid 
             jams={createdJams}
-            loading={loading && activeTab === "created"}
+            loading={loading}
             emptyMessage={isOwnProfile ? "You haven't created any game jams yet" : "This user hasn't created any game jams yet"}
             variant="compact"
             columns={{ sm: 1, md: 1, lg: 2, xl: 2 }}
@@ -101,7 +73,7 @@ export function UserJams({ userId, defaultTab = "created" }: UserJamsProps) {
         <TabsContent value="attended">
           <JamGrid 
             jams={attendedJams}
-            loading={loading && activeTab === "attended"}
+            loading={loading}
             emptyMessage={isOwnProfile ? "You haven't participated in any game jams yet" : "This user hasn't participated in any game jams yet"}
             variant="compact"
             columns={{ sm: 1, md: 1, lg: 2, xl: 2 }}
@@ -111,7 +83,7 @@ export function UserJams({ userId, defaultTab = "created" }: UserJamsProps) {
       
       {error && (
         <div className="p-4 text-center text-sm text-red-500 bg-red-50 dark:bg-red-950/20 rounded-md">
-          {error}
+          {error instanceof Error ? error.message : 'Failed to load jams'}
         </div>
       )}
     </div>

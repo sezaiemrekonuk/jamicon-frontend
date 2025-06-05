@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { Team, TeamWithMembers, CreateTeamData, UpdateTeamData, TeamInvitation } from '@/types/team';
+import { TeamJoinRequest } from '@/types/team-join-request';
 
 const API_BASE = '/api/teams';
 
@@ -102,5 +103,26 @@ export const teamApi = {
   removeMember: async (teamId: string, memberId: string): Promise<Team> => {
     const response = await apiClient.delete(`${API_BASE}/${teamId}/members/${memberId}`);
     return response.data.data.team;
-  }
+  },
+
+  // Request to join a team
+  requestToJoin: async (teamId: string, message?: string): Promise<void> => {
+    await apiClient.post(`${API_BASE}/${teamId}/join-requests`, { message });
+  },
+
+  // Get pending join requests for a team (admin)
+  getTeamJoinRequests: async (teamId: string): Promise<TeamJoinRequest[]> => {
+    const response = await apiClient.get(`${API_BASE}/${teamId}/join-requests`);
+    return response.data.data as TeamJoinRequest[];
+  },
+
+  // Accept a join request
+  acceptJoinRequest: async (teamId: string, requestId: string): Promise<void> => {
+    await apiClient.post(`${API_BASE}/${teamId}/join-requests/${requestId}/accept`);
+  },
+
+  // Reject a join request
+  rejectJoinRequest: async (teamId: string, requestId: string): Promise<void> => {
+    await apiClient.post(`${API_BASE}/${teamId}/join-requests/${requestId}/reject`);
+  },
 }; 

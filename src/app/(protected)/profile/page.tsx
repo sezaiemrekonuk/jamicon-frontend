@@ -21,11 +21,12 @@ import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/avatar-upload';
 import { useAuth } from '@/lib/providers/auth-provider';
 import { UserProfileJams } from '@/components/profile/user-profile-jams';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUserProfile } from '@/lib/hooks/useUserProfile';
 
 export default function ProfilePage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const queryClient = useQueryClient();
+  const { data: userProfile, isLoading: profileLoading, error: profileError } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   
@@ -41,60 +42,37 @@ export default function ProfilePage() {
     }
   });
   
-
   useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        setIsLoading(true);
+    if (userProfile) {
+      reset({
+        name: userProfile.name,
+        bio: userProfile.bio,
+        location: userProfile.location,
+        phone: userProfile.phone,
+        website: userProfile.website,
+        github: userProfile.github,
+        twitter: userProfile.twitter,
+        youtube: userProfile.youtube,
+        twitch: userProfile.twitch,
+        discord: userProfile.discord,
+      });
+    }
+  }, [userProfile, reset]);
 
-        // Fetch current user data
-        const userData = await userApi.getCurrentUser();
-        setUser(userData);
-        
-        // Fetch profile data
-        const profile = await userProfileApi.getCurrentUserProfile();
-        setUserProfile(profile);
-        
-        reset({
-          name: profile.name,
-          bio: profile.bio,
-          location: profile.location,
-          phone: profile.phone,
-          website: profile.website,
-          github: profile.github,
-          twitter: profile.twitter,
-          youtube: profile.youtube,
-          twitch: profile.twitch,
-          discord: profile.discord
-        });
-      } catch (error) {
-        console.error('Failed to load profile', error);
-        toast.error('Failed to load profile');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProfileData();
-  }, [reset]);
-  
   const onSubmit = async (data: any) => {
     try {
-      setIsLoading(true);
       const updatedProfile = await userProfileApi.updateUserProfile(data);
-      setUserProfile(updatedProfile);
+      queryClient.setQueryData(['userProfile'], updatedProfile);
       setIsEditing(false);
       toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Failed to update profile', error);
       toast.error('Failed to update profile');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleAvatarUpdated = (updatedUser: User) => {
-    setUser(updatedUser);
+    queryClient.setQueryData(['authUser'], updatedUser);
   };
   
   const onPasswordSubmit = async (data: any) => {
@@ -149,7 +127,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading && !userProfile) {
+  if (profileLoading && !userProfile) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-10">
         <div className="flex items-center justify-center h-64">
@@ -157,6 +135,10 @@ export default function ProfilePage() {
         </div>
       </div>
     );
+  }
+
+  if (profileError) {
+    toast.error('Failed to load profile');
   }
 
   return (
@@ -185,15 +167,8 @@ export default function ProfilePage() {
                     {/* Profile sidebar */}
                     <Card className="md:col-span-1">
                       <CardHeader className="flex flex-col items-center space-y-4">
-                        {user ? (
-                          <AvatarUpload user={user} onAvatarUpdated={handleAvatarUpdated} />
-                        ) : (
-                          <Avatar className="h-24 w-24">
-                            {authUser?.avatarUrl && (
-                              <AvatarImage src={authUser.avatarUrl} alt="Profile" />
-                            )}
-                            <AvatarFallback className="text-xl">{(userProfile?.name?.charAt(0) || authUser?.username?.charAt(0) || 'U').toUpperCase()}</AvatarFallback>
-                          </Avatar>
+                        {authUser && (
+                          <AvatarUpload user={authUser} onAvatarUpdated={handleAvatarUpdated} />
                         )}
                         <div className="space-y-1 text-center">
                           <CardTitle>{authUser?.username || 'Username'}</CardTitle>
@@ -466,7 +441,7 @@ export default function ProfilePage() {
                         
                         <div className="flex justify-end space-x-4 pt-4">
                           <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                          <Button type="submit" disabled={isLoading}>Save Changes</Button>
+                          <Button type="submit" disabled={profileLoading}>Save Changes</Button>
                         </div>
                       </form>
                     </CardContent>

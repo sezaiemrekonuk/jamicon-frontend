@@ -21,6 +21,7 @@ export interface Team {
   slug: string;
   createdAt: string;
   updatedAt: string;
+  maxSize?: number | null;
   members: TeamMember[];
 }
 

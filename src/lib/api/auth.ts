@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import { RegisterFormValues, LoginFormValues } from '../auth-schema';
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
+import { Role } from '@/types/auth';
 
 export interface TokensDto {
   accessToken: string;
@@ -28,7 +29,7 @@ export interface User {
   username: string | null;
   avatarUrl: string | null;
   emailVerified: boolean;
-  role: string;
+  role: Role;
   userProfile?: UserProfile | null;
 }
 
